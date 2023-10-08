@@ -1,6 +1,7 @@
 # One-Code-VIP-System
 VIP SYSTEM FOR FIVEM
 
+change to your webhook at server.lua 46 line
 
 This script has 2 commands 
 #1 /VIP Main menu

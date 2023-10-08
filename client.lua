@@ -1,3 +1,19 @@
+local vipplayerssaved = {}
+local cooldownactive = false
+local cooldownactive2 = false
+local cooldownactive3 = false
+local spawnLocations = {
+  { x = -1919.1498, y = 2052.7629, z = 140.7356},
+  { x = -1921.4058, y = 2044.5853, z = 140.7352},
+  { x = -1923.0010, y = 2036.4047, z = 140.7352}
+}
+
+local spawnLocations2 = {
+  { x = -1897.8069, y = 2018.1476, z = 140.8549},
+  { x = -1909.6173, y = 2030.2595, z = 140.7396}
+}
+
+
 Config = {
   DrawMarker = 10,
 	VIPservers = {
@@ -7,7 +23,7 @@ Config = {
 			Blip = {
 				Enabled = true,
 				Color = 9,
-				Label = 'VIP SERVER#1',
+				Label = 'VIP Place',
 				Sprite = 493,
 				Scale = 1.0
 			}
@@ -25,6 +41,18 @@ Config = {
 	}
 }
 
+AddEventHandler('onResourceStart', function(resourceName)
+--CreateThread(function ()
+lib.callback('One-Code:Check4', source, function(text)
+  if text == "DOESNT HAVE IT" then
+    print("Doesn't Have VIP")
+  else
+    lib.callback('One-Code:Check5', source, function(text2)
+      print(text2)
+      end)
+    end
+  end)
+end)
 
 RegisterNetEvent('esx:playerLoaded')
 AddEventHandler('esx:playerLoaded',function(xPlayer)
@@ -41,8 +69,8 @@ AddEventHandler('esx:playerLoaded',function(xPlayer)
 end)
 
 
-RegisterNetEvent('esx:playerLoaded')
-AddEventHandler('esx:playerLoaded',function()
+AddEventHandler('onResourceStart', function(resourceName)
+  if (GetCurrentResourceName() ~= resourceName) then return end
   for i = 1, #Config.VIPservers do
     if type(Config.VIPservers[i].Blip) == 'table' and Config.VIPservers[i].Blip.Enabled then
         local position = Config.VIPservers[i].Position
@@ -66,8 +94,8 @@ function IsPlayerInVipRadius(playerId)
     local playerCoords = GetEntityCoords(playerPed)
     local distance = #(playerCoords - Config.VIPservers[i].Position)
     return distance <= Config.VIPservers[i].vipRadius
+    end
   end
-end
 end
 
 RegisterCommand("GIVEVIP", function(source, args)
@@ -75,13 +103,13 @@ RegisterCommand("GIVEVIP", function(source, args)
     if not response == "Data inserted successfully" then
       lib.notify({
         title = 'VIP',
-        description = 'Failed',
+        description = 'Nepavyko',
         type = 'ban'
       })
     else
       lib.notify({
         title = 'VIP',
-        description = 'Worked',
+        description = 'Pavyko',
         type = 'ban'
       })
     end
@@ -92,175 +120,109 @@ RegisterCommand("VIP", function()
   if IsPlayerInVipRadius(source) then
     lib.callback('One-Code:Check4', source, function(granted, expires, leftDays)
       if granted == "DOESNT HAVE IT" then
-          lib.showContext('VIP_MENU2')
+          lib.showMenu('VIP_MENU2')
       else
-        lib.showContext('VIP_MENU')
+        lib.showMenu('VIP_MENU')
         end
       end)
-        TriggerEvent("chatMessage", "SYSTEM", {255, 0, 0}, "You are within the VIP radius.")
       else
-        TriggerEvent("chatMessage", "SYSTEM", {255, 0, 0}, "You are not within the VIP radius.")
-        lib.showContext('VIP_MENU3')
+        lib.showMenu('VIP_MENU3')
         lib.notify({
             title = 'VIP',
-            description = 'You are too far away from the servers for full access.',
+            description = 'Jūs esate per toli VIP serverių kad jūms veiktų lentelė',
             type = 'ban'
         })
     end
 end)
 
-lib.registerContext({
+
+lib.registerMenu({
+  id = 'VIP_MENU',
+  title = 'VIP MENU',
+  position = 'top-right',
+  options = {
+      {label = 'Pasigydymas', description = 'Jūs pagydys pilnai', icon = 'bandage'},
+      {label = 'Mašinos Tvarkymas', description = 'Sutvarkys jūsų mašina tiek varikli, tiek kėbulą', icon = 'screwdriver-wrench'},
+      {label = 'VIP Ginklų parduotuvė', description = 'VIP Ginklų parduotuvė', icon = 'shop'},
+      {label = 'Spawner', description = 'VIP Mašinos bei sraigtasparnio atspawninimas', icon = 'warehouse'},
+      {label = 'Expires', description = 'Peržiurėkite jūsų vip informacija', icon = 'clock'},
+  }
+}, function(selected, scrollIndex, args)
+    if selected == 1 then
+      if cooldownactive2 then
+        lib.notify({
+          title = 'VIP',
+          description = "You can't heal yet.",
+          type = 'ban'
+        })
+        return
+      end
+      SetEntityHealth(GetPlayerPed(-1), 200)
+      cooldownHeal()
+    elseif selected == 2 then
+      RepairVehicleInDriverSeat()
+    elseif selected == 3 then
+      lib.showMenu('VIP_MENU_GUNSHOP')
+    elseif selected == 4 then
+      lib.showMenu('VIP_MENU_SPAWNER')
+    elseif selected == 5 then
+      showexpiredate()
+    end
+end)
+
+lib.registerMenu({
   id = 'VIP_MENU2',
-  title = 'VIP Menu',
+  title = 'VIP MENU',
+  position = 'top-left',
   options = {
-    {
-      title = 'Heal',
-      description = 'Will heal you fully and make you feel great!',
-      icon = 'bandage',
-      disabled = true,
-      onSelect = function()
-        print("Pressed the button!")
-      end,
-    },
-    {
-      title = 'Vehicle Repair',
-      description = 'Will fix your vehicle fully body, engine everything!',
-      icon = 'screwdriver-wrench',
-      disabled = true,
-      onSelect = function()
-        print("Pressed the button!")
-      end,
-    },
-    {
-      title = 'Gun Shop',
-      description = 'VIP Weapon shop',
-      icon = 'shop',
-      disabled = true,
-      onSelect = function()
-        lib.showContext('VIP_MENU_GUNSHOP')
-      end,
-    },
-    {
-      title = 'Spawner',
-      description = 'Free vehicle/helicopter spawner',
-      icon = 'warehouse',
-      disabled = true,
-      onSelect = function()
-        print("Pressed the button!")
-      end,
-    },
-    {
-      title = 'Expires',
-      description = 'Check when your VIP status expires',
-      icon = 'clock',
-      onSelect = function()
-        showexpiredate()
-      end,
-    },
+      {label = 'Įspėjimas', description = 'Jūs esate per toli VIP serverinės', icon = 'warning'},
+      {label = 'Laikotarpis', description = 'Peržiurėkite jūsų vip informacija', icon = 'clock'},
   }
-})
+}, function(selected, scrollIndex, args)
+    if selected == 1 then
+      lib.showMenu('VIP_MENU2')
+    elseif selected == 2 then
+      showexpiredate()
+    end
+end)
 
-lib.registerContext({
+
+lib.registerMenu({
   id = 'VIP_MENU3',
-  title = 'VIP Menu',
+  title = 'VIP MENU',
+  position = 'top-right',
   options = {
-    {
-      title = 'Warning!',
-      description = 'You are too far away from the servers for full access.',
-    },
-    {
-      title = 'Heal',
-      description = 'Will heal you fully and make you feel great!',
-      icon = 'bandage',
-      disabled = true,
-      onSelect = function()
-        print("Pressed the button!")
-      end,
-    },
-    {
-      title = 'Vehicle Repair',
-      description = 'Will fix your vehicle fully body, engine everything!',
-      icon = 'screwdriver-wrench',
-      disabled = true,
-      onSelect = function()
-        print("Pressed the button!")
-      end,
-    },
-    {
-      title = 'Gun Shop',
-      description = 'VIP Weapon shop',
-      icon = 'shop',
-      disabled = true,
-      onSelect = function()
-        lib.showContext('VIP_MENU_GUNSHOP')
-      end,
-    },
-    {
-      title = 'Spawner',
-      description = 'Free vehicle/helicopter spawner',
-      icon = 'warehouse',
-      disabled = true,
-      onSelect = function()
-        print("Pressed the button!")
-      end,
-    },
-    {
-      title = 'Expires',
-      description = 'Check when your VIP status expires',
-      icon = 'clock',
-      onSelect = function()
-        showexpiredate()
-      end,
-    },
+      {label = 'Warning!', description = 'You are too far away from the servers for full access.', icon = 'warning'},
+      {label = 'Expires', description = 'Peržiurėkite jūsų vip informacija', icon = 'clock'},
   }
-})
+}, function(selected, scrollIndex, args)
+    if selected == 1 then
+      lib.showMenu('VIP_MENU2')
+    elseif selected == 2 then
+      showexpiredate()
+    end
+end)
 
-lib.registerContext({
-    id = 'VIP_MENU',
-    title = 'VIP Menu',
-    options = {
-      {
-        title = 'Heal',
-        description = 'Will heal you fully and make you feel great!',
-        icon = 'bandage',
-        onSelect = function()
-          print("Pressed the button!")
-        end,
-      },
-      {
-        title = 'Vehicle Repair',
-        description = 'Will fix your vehicle fully body, engine everything!',
-        icon = 'screwdriver-wrench',
-        onSelect = function()
-          print("Pressed the button!")
-        end,
-      },
-      {
-        title = 'Gun Shop',
-        description = 'VIP Weapon shop',
-        icon = 'shop',
-        onSelect = function()
-          lib.showContext('VIP_MENU_GUNSHOP')
-        end,
-      },
-      {
-        title = 'Spawner',
-        description = 'Free vehicle/helicopter spawner',
-        icon = 'warehouse',
-        onSelect = function()
-          print("Pressed the button!")
-        end,
-      },
-      {
-        title = 'Expires',
-        description = 'Check when your VIP status expires',
-        icon = 'clock',
-        onSelect = function()
-          showexpiredate()
-        end,
-      },
-    }
-  })
+
+lib.registerMenu({
+  id = 'VIP_MENU_SPAWNER',
+  title = 'VIP MENU',
+  position = 'top-right',
+  options = {
+      {label = 'Informacija', description = 'Pasirinkite automobili kurį norite atsispawninti', icon = 'info'},
+      {label = 'Atsispawninti Sraigtasparni', description = 'Atsispawninti VIP Sraigtasparni', icon = 'helicopter'},
+      {label = 'Atsispawninti Mašiną', description = 'Atsispawninti VIP Automobili', icon = 'car'},
+  }
+}, function(selected, scrollIndex, args)
+    if selected == 1 then
+      lib.showMenu('VIP_MENU_SPAWNER')
+    elseif selected == 2 then
+      SpawnVehicle("supervolito", spawnLocations2)
+    elseif selected == 3 then
+      SpawnVehicle("tailgater2", spawnLocations)
+    end
+end)
+
 
 function showexpiredate()
   lib.callback('One-Code:Check4', source, function(granted, expires, leftDays)
@@ -268,263 +230,195 @@ function showexpiredate()
       expires = 0
       leftDays = 0
     end
-    lib.registerContext({
+    lib.registerMenu({
       id = 'VIP_MENU_TIMER',
-      title = 'VIP Menu',
+      title = 'VIP MENU',
+      position = 'top-right',
       options = {
-        {
-          title = 'Granted at ' .. granted,
-          icon = 'clock',
-         },
-        {
-          title = 'Expires at ' .. expires,
-           icon = 'clock',
-         },
-         {
-           title = 'Expires in '..leftDays..' Days',
-           icon = 'clock',
-         }
-       }
-     })
-     lib.registerContext({
-       id = 'VIP_MENU_TIMER2',
-       title = 'VIP Menu',
-        options = {
-         {
-          title = 'You don\'t have VIP',
-          icon = 'clock',
-        },
+          {label = 'Buvo suteikta ' ..granted.."", icon = 'clock'},
+          {label = 'Galioja iki ' .. expires.."", icon = 'clock'},
+          {label = 'VIP statusas pasibaigs '..leftDays..' Days', icon = 'clock'},
       }
-    })
+    }, function(selected, scrollIndex, args)
+        if selected == 1 then
+          lib.showMenu('VIP_MENU_TIMER')
+        elseif selected == 2 then
+          lib.showMenu('VIP_MENU_TIMER')
+        elseif selected == 3 then
+          lib.showMenu('VIP_MENU_TIMER')
+        end
+    end)
+    lib.registerMenu({
+      id = 'VIP_MENU_TIMER2',
+      title = 'VIP MENU',
+      position = 'top-right',
+      options = {
+          {label = 'You don\'t have VIP', icon = 'clock'},
+      }
+    }, function(selected, scrollIndex, args)
+        if selected == 1 then
+          lib.showMenu('VIP_MENU_TIMER2')
+        end
+    end)
        if granted == "DOESNT HAVE IT" then
-        lib.showContext('VIP_MENU_TIMER2')
+        lib.showMenu('VIP_MENU_TIMER2')
        else
-        lib.showContext('VIP_MENU_TIMER')
+        lib.showMenu('VIP_MENU_TIMER')
       end
   end)
 end
 
--- GUN SHOP WHERE BUY WEAPONS
-  lib.registerContext({
-    id = 'VIP_MENU_GUNSHOP',
-    title = 'VIP Menu',
+
+lib.registerMenu({
+  id = 'VIP_MENU_GUNSHOP',
+  title = 'VIP MENU',
+  position = 'top-right',
+  options = {
+      {label = 'Pistoletas DP9', description = '30000$', icon = 'gun'},
+      {label = 'Pistoletas WM 29', description = '30000$', icon = 'gun'},
+      {label = 'Pistoletas Browning', description = '30000$', icon = 'gun'},
+      {label = 'Pistoletas Glock', description = '50000$', icon = 'gun'},
+      {label = 'Automatas AK-47', description = '300000$', icon = 'gun'},
+      {label = 'Automatas M4', description = '350000$', icon = 'gun'},
+      {label = 'Automatukas Uzi', description = '65000$', icon = 'gun'},
+      {label = 'Automatukas SMG', description = '42500$', icon = 'gun'},
+      {label = 'Automatukas Kovinis SMG', description = '80000$', icon = 'gun'},
+      {label = 'Automatukas TommyGun', description = '100000$', icon = 'gun'},
+      {label = 'Automatas Aug', description = '500000$', icon = 'gun'},
+      {label = 'Kulkos', description = 'Paspausk ir numes i kita puslapi kur gali kulkas pirkti', icon = 'box-open'},
+  }
+}, function(selected, scrollIndex, args)
+    if selected == 1 then
+      ConfirmPurchase("Pistoletas DP9", "30000", "weapon_dp9", 1)
+    elseif selected == 2 then
+      ConfirmPurchase("Pistoletas WM 29", "30000", "weapon_pistolxm3", 1)
+    elseif selected == 3 then
+      ConfirmPurchase("Pistoletas Browning", "30000", "weapon_browning", 1)
+    elseif selected == 4 then
+      ConfirmPurchase("Pistoletas Glock", "50000", "weapon_glock", 1)
+    elseif selected == 5 then
+      ConfirmPurchase("Automatas AK-47", "300000", "weapon_assaultrifle", 1)
+    elseif selected == 6 then
+      ConfirmPurchase("Automatas M4", "350000", "weapon_m4", 1)
+    elseif selected == 7 then
+      ConfirmPurchase(" AutomatukasUzi", "65000", "WEAPON_MICROSMG2", 1)
+    elseif selected == 8 then
+      ConfirmPurchase("Automatukas SMG", "42500", "weapon_smg", 1)
+    elseif selected == 9 then
+      ConfirmPurchase("Automatukas Kovinis SMG", "80000", "Combatpdw", 1)
+    elseif selected == 10 then
+      ConfirmPurchase("Automatukas TommyGun", "100000", "weapon_gusenberg", 1)
+    elseif selected == 11 then
+      ConfirmPurchase("Automatas Aug", "500000", "weapon_militaryrifle", 1)
+    elseif selected == 12 then
+      lib.showMenu('VIP_MENU_GUNSHOP2')
+    end
+end)
+
+  lib.registerMenu({
+    id = 'VIP_MENU_GUNSHOP2',
+    title = 'VIP MENU',
+    position = 'top-right',
     options = {
-      {
-        title = 'Pistoletas DP9',
-        -- description = 'Assault Rifle',
-        image = 'https://cdn.discordapp.com/attachments/1143997699914465452/1155224587097866422/WEAPON_DP9.png',
-        icon = 'gun',
-        onSelect = function()
-          ConfirmPurchase("Pistoletas DP9", "15000", "weapon_dp9")
-        end,
-        metadata = {
-          {label = 'Price', value = '15,000'},
-        },
-      },
-      {
-        title = 'Pistoletas WM 29',
-        -- description = 'Assault Rifle',
-        image = 'https://cdn.discordapp.com/attachments/1143997699914465452/1155225591046492231/weapon_pistol.png',
-        icon = 'gun',
-        onSelect = function()
-          ConfirmPurchase("Pistoletas WM 29", "15000", "weapon_assaultrifle")
-        end,
-        metadata = {
-          {label = 'Price', value = '15,000'},
-        },
-      },
-      {
-        title = 'Pistoletas Browning',
-        -- description = 'Assault Rifle',
-        image = 'https://cdn.discordapp.com/attachments/1143997699914465452/1155226076436512888/weapon_browning.png',
-        icon = 'gun',
-        onSelect = function()
-          ConfirmPurchase("Pistoletas Browning", "15000", "weapon_assaultrifle")
-        end,
-        metadata = {
-          {label = 'Price', value = '15,000'},
-        },
-      },
-      {
-        title = 'Pistoletas Glock',
-        -- description = 'Assault Rifle',
-        image = 'https://cdn.discordapp.com/attachments/1143997699914465452/1155226166358200430/weapon_glock.png',
-        icon = 'gun',
-        onSelect = function()
-          ConfirmPurchase("Pistoletas Glock", "20000", "weapon_assaultrifle")
-        end,
-        metadata = {
-          {label = 'Price', value = '20,000'},
-        },
-      },
-      {
-        title = 'AK-47',
-        -- description = 'Assault Rifle',
-        image = 'https://cdn.discordapp.com/attachments/1143997699914465452/1155223097914445884/weapon_assaultrifle.png',
-        icon = 'gun',
-        onSelect = function()
-          ConfirmPurchase("AK-47", "150000", "weapon_assaultrifle")
-        end,
-        metadata = {
-          {label = 'Price', value = '150,000'},
-        },
-      },
-      {
-        title = 'M4',
-        -- description = 'Assault Rifle',
-        image = 'https://cdn.discordapp.com/attachments/1143997699914465452/1155226282011922524/weapon_carbinerifle.png',
-        icon = 'gun',
-        onSelect = function()
-          ConfirmPurchase("M4", "200000", "weapon_assaultrifle")
-        end,
-        metadata = {
-          {label = 'Price', value = '200,000'},
-        },
-      },
-      {
-        title = 'Uzi',
-        -- description = 'Assault Rifle',
-        image = 'https://cdn.discordapp.com/attachments/1143997699914465452/1155226584786153533/weapon_microsmg.png',
-        icon = 'gun',
-        onSelect = function()
-          ConfirmPurchase("Uzi", "65000", "weapon_assaultrifle")
-        end,
-        metadata = {
-          {label = 'Price', value = '65,000'},
-        },
-      },
-      {
-        title = 'SMG',
-        -- description = 'Assault Rifle',
-        image = 'https://cdn.discordapp.com/attachments/1143997699914465452/1155226724133507222/weapon_smg.png',
-        icon = 'gun',
-        onSelect = function()
-          ConfirmPurchase("SMG", "42500", "weapon_assaultrifle")
-        end,
-        metadata = {
-          {label = 'Price', value = '42,500'},
-        },
-      },
-      -- {
-      --   title = 'Gun name',
-      --   -- description = 'Assault Rifle',
-      --   -- image = 'https://cdn.discordapp.com/attachments/1143997699914465452/1155012367604789288/image.png',
-      --   icon = 'circle',
-      --   onSelect = function()
-      --     ConfirmPurchase("Gun name", "Price", "Weapon Spawn weapon_assaultrifle")
-      --   end,
-      --   metadata = {
-      --     {label = 'Price', value = '0'},
-      --   },
-      -- },
+        {label = '9mm', icon = 'box-open'},
+        {label = 'Rifle', icon = 'box-open'},
+        {label = 'Rifle2', icon = 'box-open'},
     }
-  })
+  }, function(selected, scrollIndex, args)
+      if selected == 1 then
+        local input = lib.inputDialog('Kiek nori?', {'Numeris'})
+ 
+        if not input then return end
+        ConfirmPurchase("9mm", tonumber(input[1]) * 10, "ammo-9", tonumber(input[1]))
+      elseif selected == 2 then
+        local input = lib.inputDialog('Kiek nori?', {''})
+ 
+        if not input then return end
+        ConfirmPurchase("Rifle", tonumber(input[1]) * 10, "ammo-rifle", tonumber(input[1]))
+      elseif selected == 3 then
+        local input = lib.inputDialog('Kiek nori?', {''})
+ 
+        if not input then return end
+        ConfirmPurchase("Rifle 2", tonumber(input[1]) * 10, "ammo-rifle2", tonumber(input[1]))
+      end
+  end)
 
 
-function ConfirmPurchase(GunName, Price, GunModel)
-  lib.registerContext({
-    id = 'VIP_MENU_CONFIRM',
-    title = 'VIP Menu',
-    options = {
-      {
-        title = 'Confirm Purchase of '..GunName..' For '..Price..'',
-        -- description = ''..GunName..' For '..Price..'',
-        -- image = 'https://cdn.discordapp.com/attachments/1143997699914465452/1155012367604789288/image.png',
-        icon = 'circle',
-        onSelect = function()
-          
-        end,
-      },
-      {
-        title = 'Cancel Purchase',
-        -- description = 'Assault Rifle',
-        -- image = 'https://cdn.discordapp.com/attachments/1143997699914465452/1155012367604789288/image.png',
-        icon = 'circle',
-        onSelect = function()
-          
-        end,
-      }
-    }
-  })
-  --lib.showContext('VIP_MENU_CONFIRM')
 
-
+function ConfirmPurchase(GunName, Price, GunModel, Count)
   local alert = lib.alertDialog({
     header = 'VIP Shop Purchase',
     content = 'Confirm Purchase of '..GunName..' For '..Price..'',
     centered = true,
     cancel = true
-})
+  })
+
   if alert == "confirm" then
-    lib.registerContext({
-      id = 'VIP_MENU_PAYMENT_METHOD',
-      title = 'VIP Shop Payment Method',
-      options = {
-        {
-          title = 'Pay with Bank',
-          icon = 'circle',
-          onSelect = function()
-            lib.callback('One-Code:Check', source, function(response)
-            if not response then
-              local alert = lib.alertDialog({
-                header = 'VIP Shop Payment Failed',
-                content = "You don't have enough money for it you want to try diffrent payment method?",
-                centered = true,
-                cancel = true
-            })
-                if alert == "confirm" then
-                  lib.showContext('VIP_MENU_PAYMENT_METHOD')
-                else
-                  return
-                end
-              else
-                lib.callback('One-Code:Check2', source, function(response)
-                  if not response then
-                    lib.notify({
-                      title = 'VIP',
-                      description = 'You can\'t carry it',
-                      type = 'ban'
-                    })
-                  end
-                end, GunModel)
-              end
-            end, "bank", Price)
-          end,
-        },
-        {
-          title = 'Pay with Cash',
-          icon = 'circle',
-          onSelect = function()
-            lib.callback('One-Code:Check', source, function(response)
+    
+lib.registerMenu({
+  id = 'VIP_MENU_PAYMENT_METHOD',
+  title = 'VIP MENU',
+  position = 'top-right',
+  options = {
+      {label = 'Pay using Bank', icon = 'building-columns'},
+      {label = 'Pay using Cash', icon = 'money-bill'},
+  }
+}, function(selected, scrollIndex, args)
+    if selected == 1 then
+      lib.callback('One-Code:Check', source, function(response)
+        if not response then
+          local alert = lib.alertDialog({
+            header = 'VIP Shop Payment Failed',
+            content = "You don't have enough money for it you want to try diffrent payment method?",
+            centered = true,
+            cancel = true
+        })
+            if alert == "confirm" then
+              lib.showMenu('VIP_MENU_PAYMENT_METHOD')
+            else
+              return
+            end
+          else
+            lib.callback('One-Code:Check2', source, function(response)
               if not response then
-                local alert = lib.alertDialog({
-                  header = 'VIP Shop Payment Failed',
-                  content = "You don't have enough money for it you want to try diffrent payment method?",
-                  centered = true,
-                  cancel = true
-              })
-                  if alert == "confirm" then
-                    lib.showContext('VIP_MENU_PAYMENT_METHOD')
-                  else
-                    return
-                  end
-                else
-                  lib.callback('One-Code:Check2', source, function(response)
-                    if not response then
-                      lib.notify({
-                        title = 'VIP',
-                        description = 'You can\'t carry it',
-                        type = 'ban'
-                      })
-                    end
-                  end, GunModel)
-                end
-            end, "money", Price)
-          end,
-        }
-      }
-    })
-    lib.showContext('VIP_MENU_PAYMENT_METHOD')
+                lib.notify({
+                  title = 'VIP',
+                  description = 'You can\'t carry it',
+                  type = 'ban'
+                })
+              end
+            end, GunModel, Count)
+          end
+        end, "bank", Price)
+    elseif selected == 2 then
+      lib.callback('One-Code:Check', source, function(response)
+        if not response then
+          local alert = lib.alertDialog({
+            header = 'VIP Shop Payment Failed',
+            content = "You don't have enough money for it you want to try diffrent payment method?",
+            centered = true,
+            cancel = true
+        })
+            if alert == "confirm" then
+              lib.showMenu('VIP_MENU_PAYMENT_METHOD')
+            else
+              return
+            end
+          else
+            lib.callback('One-Code:Check2', source, function(response)
+              if not response then
+                lib.notify({
+                  title = 'VIP',
+                  description = 'You can\'t carry it',
+                  type = 'ban'
+                })
+              end
+            end, GunModel, Count)
+          end
+      end, "money", Price)
+    end
+end)
+    lib.showMenu('VIP_MENU_PAYMENT_METHOD')
     else
       lib.notify({
         title = 'VIP',
@@ -532,4 +426,202 @@ function ConfirmPurchase(GunName, Price, GunModel)
         type = 'ban'
       })
     end
+end
+
+Citizen.CreateThread(function()
+  Wait(5000)
+  while true do
+    lib.callback('One-Code:Check6', false, function(response)
+      vipplayerssaved = response  
+      print("Data recieved from server side!")
+    end)
+    Wait(300000)
+  end
+end)
+
+Citizen.CreateThread(function()
+  local sleep = 500
+  while true do
+    Citizen.Wait(sleep)
+      local localPlayerId = PlayerId()
+      local x1, y1, z1 = table.unpack(GetEntityCoords(GetPlayerPed(-1), true))
+
+      for id = 0, 256 do
+          if id ~= localPlayerId and NetworkIsPlayerActive(id) then
+              local ped = GetPlayerPed(id)
+              local x2, y2, z2 = table.unpack(GetEntityCoords(ped, true))
+              local distance = math.floor(GetDistanceBetweenCoords(x1, y1, z1, x2, y2, z2, true))
+              local takeaway = 0.95
+              z2 = z2 + 1.1
+
+              if distance < 10 and IsEntityVisible(ped) then
+                sleep = 500
+                  if NetworkIsPlayerTalking(id) then
+                    sleep = 0
+                      local serverId = GetPlayerServerId(id)
+                      DrawMarker(0, x2, y2, z2 - 0.0, 0, 0, 10, 0, 0, 0, 0.1, 0.1, 0.1, 55, 160, 205, 105, 1, 1, 2, 0, 0, 0, 0)
+                      if IsPlayerVIP(serverId) then
+                          DrawText3D(x2, y2, z2 + 0.2, "VIP Narys("..serverId..")", 255, 215, 0, 255)
+                      end
+                  end
+              end
+          end
+      end
+  end
+end)
+
+function IsPlayerVIP(serverId)
+  for _, id in ipairs(vipplayerssaved) do
+      if id == serverId then
+          return true
+      end
+  end
+  return false
+end
+
+function DrawText3D(x, y, z, text, r, g, b, a)
+  local onScreen, _x, _y = World3dToScreen2d(x, y, z)
+  local px, py, pz = table.unpack(GetGameplayCamCoord())
+  local scale = 0.4
+
+  if onScreen then
+      SetTextScale(scale, scale)
+      SetTextFont(4)
+      SetTextProportional(1)
+      SetTextColour(r, g, b, a)
+      SetTextOutline()
+      SetTextEntry("STRING")
+      SetTextCentre(1)
+      AddTextComponentString(text)
+      DrawText(_x, _y)
+  end
+end
+
+function cooldownVehicle()
+  cooldownactive = true
+  Wait(1200000)
+  cooldownactive = false
+end
+
+function cooldownHeal()
+  cooldownactive2 = true
+  Wait(600000)
+  cooldownactive2 = false
+end
+
+function cooldownRepair()
+  cooldownactive3 = true
+  Wait(600000)
+  cooldownactive3 = false
+end
+
+function SpawnVehicle(modelHash, spawnLocationsfunc)
+  if cooldownactive then
+    lib.notify({
+      title = 'VIP',
+      description = "You can't spawn another vehicle yet.",
+      type = 'ban'
+    })
+    return
+  end
+
+  local spawnAllowed = false
+
+  for _, coords in ipairs(spawnLocationsfunc) do
+    local vehicles = ESX.Game.GetVehicles()
+    local isOccupied = false
+
+    for _, vehicle in ipairs(vehicles) do
+      local distance = GetDistanceBetweenCoords(coords.x, coords.y, coords.z, GetEntityCoords(vehicle))
+      if distance < 5.0 then
+        isOccupied = true
+        break
+      end
+    end
+
+    if not isOccupied then
+      spawnAllowed = true
+      local spawnCoords = coords
+      local vehicle = ESX.Game.SpawnVehicle(modelHash, spawnCoords, 260.78)
+      SetEntityAsMissionEntity(vehicle, true, true)
+      cooldownVehicle()
+      lib.notify({
+        title = 'VIP',
+        description = "Vehicle spawned!",
+        type = 'ban'
+      })
+      break
+    end
+  end
+
+  if not spawnAllowed then
+    lib.notify({
+      title = 'VIP',
+      description = "Cannot spawn vehicle. All locations are occupied.",
+      type = 'ban'
+    })
+  end
+end
+
+
+
+
+function RepairVehicleInDriverSeat()
+  if cooldownactive3 then
+    lib.notify({
+      title = 'VIP',
+      description = "You can't repair the vehicle yet.",
+      type = 'ban'
+    })
+    return
+  end
+  if not IsPlayerInVipRadius(source) then return lib.notify({
+    title = 'VIP',
+    description = 'You must be in the server zone!',
+    type = 'ban'
+  }) end
+  local playerPed = GetPlayerPed(-1)
+  if IsPedInAnyVehicle(playerPed, false) then
+    if lib.progressCircle({
+      duration = 10000,
+      position = 'bottom',
+      useWhileDead = false,
+      canCancel = true,
+    }) then
+      local vehicle = GetVehiclePedIsIn(playerPed, false)
+      if GetPedInVehicleSeat(vehicle, -1) == playerPed then
+        SetVehicleFixed(vehicle)
+        SetVehicleDeformationFixed(vehicle)
+        SetVehicleUndriveable(vehicle, false)
+        SetVehicleEngineOn(vehicle, true, true)
+        SetVehicleDirtLevel(vehicle, 0)
+        if IsThisModelABike(GetEntityModel(vehicle)) or IsThisModelAQuadbike(GetEntityModel(vehicle)) then
+          SetVehicleOilLevel(vehicle, 100.0)
+        end
+        cooldownRepair()
+      lib.notify({
+        title = 'VIP',
+        description = 'Vehicle repaired!',
+        type = 'ban'
+      })
+    else
+      lib.notify({
+            title = 'VIP',
+            description = 'You must be in the driver\'s seat to repair the vehicle.',
+            type = 'ban'
+          })
+        end
+      else
+         lib.notify({
+        title = 'VIP',
+        description = 'Action was canceled',
+        type = 'ban'
+    }) end
+      else
+        lib.notify({
+          title = 'VIP',
+          description = 'You must be inside a vehicle to repair it.',
+          type = 'ban'
+        })
+  end
 end

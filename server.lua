@@ -10,9 +10,9 @@ lib.callback.register('One-Code:Check', function(source, Type, Amount)
     end
 end)
 
-lib.callback.register('One-Code:Check2', function(source, Model)
-    if exports.ox_inventory:CanCarryItem(source, Model, 1) then
-        exports.ox_inventory:AddItem(source, Model, 1)
+lib.callback.register('One-Code:Check2', function(source, Model, Count)
+    if exports.ox_inventory:CanCarryItem(source, Model, Count) then
+        exports.ox_inventory:AddItem(source, Model, Count)
         return true
     else
         return false
@@ -42,14 +42,50 @@ lib.callback.register('One-Code:Check3', function(source, target, data1)
         type = 'success'
     })
     table.insert(VIPPlayers, target)
+
+    PerformHttpRequest("Your WEBHOOK", function(err, text, headers) end, 'POST', json.encode({
+        username = "One-Code", 
+        embeds = {{
+            ["color"] = 16711680, 
+            ["author"] = {
+                ["name"] = "One-Code VIP",
+                ["icon_url"] = ""
+            },
+            ["title"] = tostring("/GIVEVIP"),
+            ["description"] = tostring("Admin("..GetPlayerName(source)..") Gave VIP Plan to ("..GetPlayerName(target)..") for "..daysLeft..""),
+            ["footer"] = {
+                ["text"] = " • "..os.date("%x %X %p"),
+                ["icon_url"] = "https://via.placeholder.com/30x30",
+            },
+            ["fields"] = {
+                {
+                    ["name"] = "Admin Identifier:",
+                    ["value"] = GetPlayerDetails(source),
+                    ["inline"] = false
+                },
+                {
+                    ["name"] = "Target Identifier:",
+                    ["value"] = GetPlayerDetails(target),
+                    ["inline"] = false
+                }
+            },
+        }}, 
+        avatar_url = ""
+    }), { 
+        ['Content-Type'] = 'application/json' 
+    })
+
+    if not IsPlayerInVIPList(target) then
+        table.insert(VIPPlayers, target)
+    end
     MySQL.Async.execute('INSERT INTO `onecodesvip` (license, Granted, Expires, LeftDays) VALUES (?, ?, ?, ?)', {
-        xPlayer.getIdentifier(),
+        xTarget.getIdentifier(),
         os.time(),
         expires,
         daysLeft
     }, function(rowsChanged)
         if rowsChanged > 0 then
-            print('Data inserted successfully')
+            --print('Data inserted successfully')
             return 'Data inserted successfully'
         else
             print('Failed to insert data')
@@ -69,10 +105,10 @@ lib.callback.register('One-Code:Check4', function(source)
             granted = result[1].Granted
             expires = result[1].Expires
             leftDays = result[1].LeftDays
-            print('License:', license)
-            print('Granted:', granted)
-            print('Expires:', expires)
-            print('LeftDays:', leftDays)
+            --print('License:', license)
+            --print('Granted:', granted)
+            --print('Expires:', expires)
+            --print('LeftDays:', leftDays)
         else
             print('No record found for identifier:', xPlayer.identifier)
             granted, expires, leftDays = false, false, false
@@ -87,18 +123,42 @@ lib.callback.register('One-Code:Check4', function(source)
 end)
 
 lib.callback.register('One-Code:Check5', function(source)
-    table.insert(VIPPlayers, source)
-    return "Player Saved As VIP"
+    if not IsPlayerInVIPList(source) then
+        table.insert(VIPPlayers, source)
+        local dataToShare = VIPPlayers
+        local jsonData = json.encode(dataToShare)
+        local file = io.open("SharedDataForVIP.json", "w")
+        if file then
+            file:write(jsonData)
+            file:close()
+        end
+        return "Player Saved As VIP"
+    else
+        return "Player is already a VIP"
+    end
 end)
 
-AddEventHandler('playerDropped', function(reason)
-    table.remove(VIPPlayers, source)
+function IsPlayerInVIPList(playerID)
+    for _, id in ipairs(VIPPlayers) do
+        if id == playerID then
+            return true
+        end
+    end
+    return false
+end
+
+-- AddEventHandler('playerDropped', function(reason)
+--     table.remove(VIPPlayers, source)
+-- end)
+
+lib.callback.register('One-Code:Check6', function()
+    return VIPPlayers
 end)
 
 
 AddEventHandler('onResourceStart', function(resourceName)
     if (GetCurrentResourceName() ~= resourceName) then return end
-while true do
+    while true do
     MySQL.query('SELECT license, Granted, Expires, LeftDays FROM onecodesvip', {},
     function(results)
         for _, result in ipairs(results) do
@@ -106,7 +166,7 @@ while true do
             local granted = result.Granted
             local expires = result.Expires
             local leftDays = result.LeftDays
-            local currentDate = os.time()
+            local currentDate = os.time()   
             local expirationDate = os.time({year = os.date('%Y', expires), month = os.date('%m', expires), day = os.date('%d', expires)})
             local daysLeft = math.floor((expirationDate - currentDate) / (24 * 3600))
             MySQL.Async.execute('UPDATE onecodesvip SET LeftDays = ? WHERE license = ?', {daysLeft, license}, function(rowsChanged)
@@ -130,3 +190,45 @@ while true do
         Wait(60 * 60 * 1000)
     end
 end)
+
+function GetPlayerDetails(src)
+	local ids = ExtractIdentifiers(src)
+    if ids.discord ~= "" then _discordID ="\n**Discord ID:** <@" ..ids.discord:gsub("discord:", "")..">" else _discordID = "\n**Discord ID:** N/A" end
+    if ids.steam ~= "" then _steamID ="\n**Steam ID:** " ..ids.steam.."" else _steamID = "\n**Steam ID:** N/A" end
+    if ids.steam ~= "" then _steamURL ="\nhttps://steamcommunity.com/profiles/" ..tonumber(ids.steam:gsub("steam:", ""),16).."" else _steamURL = "\n**Steam URL:** N/A" end
+    if ids.license ~= "" then _license ="\n**License:** " ..ids.license else _license = "\n**License :** N/A" end
+    if ids.ip ~= "" then _ip ="\n**IP:** " ..ids.ip else _ip = "\n**IP :** N/A" end
+    _playerID ="\n**Player ID:** " ..src..""
+	return _playerID ..''.. _discordID..''.._steamID..''.._steamURL..''.._license..''.._ip
+end
+
+function ExtractIdentifiers(src)
+    local identifiers = {
+        steam = "",
+        ip = "",
+        discord = "",
+        license = "",
+        xbl = "",
+        live = ""
+    }
+
+    for i = 0, GetNumPlayerIdentifiers(src) - 1 do
+        local id = GetPlayerIdentifier(src, i)
+
+        if string.find(id, "steam") then
+            identifiers.steam = id
+        elseif string.find(id, "ip") then
+            identifiers.ip = id
+        elseif string.find(id, "discord") then
+            identifiers.discord = id
+        elseif string.find(id, "license") then
+            identifiers.license = id
+        elseif string.find(id, "xbl") then
+            identifiers.xbl = id
+        elseif string.find(id, "live") then
+            identifiers.live = id
+        end
+    end
+
+    return identifiers
+end

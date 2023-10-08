@@ -15,13 +15,3 @@ server_scripts {
 client_scripts {
     "client.lua"
 }
-
-
-
--- ui_page 'html/tablet.html'
-
--- files {
---     'html/tablet.html',
---     'html/tablet.js',
---     'html/style.css',
--- }
